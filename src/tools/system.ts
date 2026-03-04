@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { PortainerClient } from "../client.js";
 import { jsonResponse, errorResponse } from "../utils/response.js";
@@ -61,6 +62,38 @@ export function registerSystemTools(server: McpServer, client: PortainerClient, 
       }
 
       return jsonResponse(health);
+    } catch (e) {
+      return errorResponse(e);
+    }
+  });
+
+  server.tool("get_events", "Get Docker events from an environment (bounded time range)", {
+    endpointId: z.number().describe("Environment/endpoint ID"),
+    since: z.string().optional().describe("Show events since timestamp (Unix timestamp or RFC3339, default: 5 minutes ago)"),
+    until: z.string().optional().describe("Show events until timestamp (Unix timestamp or RFC3339, default: now)"),
+    type: z.enum(["container", "image", "volume", "network", "daemon", "plugin", "node", "service", "secret", "config"]).optional().describe("Filter by event type"),
+    limit: z.number().optional().describe("Max events to return (default 100)"),
+  }, async (args) => {
+    try {
+      const now = Math.floor(Date.now() / 1000);
+      const query: Record<string, string> = {
+        since: args.since || String(now - 300),
+        until: args.until || String(now),
+      };
+      if (args.type) {
+        query.filters = JSON.stringify({ type: [args.type] });
+      }
+      const result = await client.get(client.dockerPath(args.endpointId, "/events"), query);
+      // Events API returns newline-delimited JSON
+      const text = String(result);
+      if (!text.trim()) {
+        return jsonResponse({ events: [], total: 0 });
+      }
+      const events = text.trim().split("\n").map(line => {
+        try { return JSON.parse(line); } catch { return { raw: line }; }
+      });
+      const limited = events.slice(0, args.limit || 100);
+      return jsonResponse({ events: limited, total: events.length });
     } catch (e) {
       return errorResponse(e);
     }
