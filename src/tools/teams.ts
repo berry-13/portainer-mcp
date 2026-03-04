@@ -1,15 +1,15 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { PortainerClient } from "../client.js";
+import { ClientAccessor } from "../client.js";
 import { jsonResponse, errorResponse, paginatedResponse } from "../utils/response.js";
 
-export function registerTeamTools(server: McpServer, client: PortainerClient, readOnly: boolean): void {
+export function registerTeamTools(server: McpServer, client: ClientAccessor, readOnly: boolean): void {
   server.tool("list_teams", "List all teams", {
     limit: z.number().optional().describe("Max items to return"),
     offset: z.number().optional().describe("Items to skip"),
   }, async (args) => {
     try {
-      const result = await client.get("/api/teams") as unknown[];
+      const result = await client().get("/api/teams") as unknown[];
       return paginatedResponse(result, args.limit, args.offset);
     } catch (e) {
       return errorResponse(e);
@@ -20,7 +20,7 @@ export function registerTeamTools(server: McpServer, client: PortainerClient, re
     id: z.number().describe("Team ID"),
   }, async (args) => {
     try {
-      const result = await client.get(`/api/teams/${args.id}`);
+      const result = await client().get(`/api/teams/${args.id}`);
       return jsonResponse(result);
     } catch (e) {
       return errorResponse(e);
@@ -31,7 +31,7 @@ export function registerTeamTools(server: McpServer, client: PortainerClient, re
     id: z.number().describe("Team ID"),
   }, async (args) => {
     try {
-      const result = await client.get(`/api/teams/${args.id}/memberships`);
+      const result = await client().get(`/api/teams/${args.id}/memberships`);
       return jsonResponse(result);
     } catch (e) {
       return errorResponse(e);
@@ -43,7 +43,7 @@ export function registerTeamTools(server: McpServer, client: PortainerClient, re
       name: z.string().describe("Team name"),
     }, async (args) => {
       try {
-        const result = await client.post("/api/teams", { Name: args.name });
+        const result = await client().post("/api/teams", { Name: args.name });
         return jsonResponse(result);
       } catch (e) {
         return errorResponse(e);
@@ -55,7 +55,7 @@ export function registerTeamTools(server: McpServer, client: PortainerClient, re
       name: z.string().describe("New team name"),
     }, async (args) => {
       try {
-        const result = await client.put(`/api/teams/${args.id}`, { Name: args.name });
+        const result = await client().put(`/api/teams/${args.id}`, { Name: args.name });
         return jsonResponse(result);
       } catch (e) {
         return errorResponse(e);
@@ -66,7 +66,7 @@ export function registerTeamTools(server: McpServer, client: PortainerClient, re
       id: z.number().describe("Team ID"),
     }, async (args) => {
       try {
-        await client.delete(`/api/teams/${args.id}`);
+        await client().delete(`/api/teams/${args.id}`);
         return jsonResponse({ success: true });
       } catch (e) {
         return errorResponse(e);
@@ -79,7 +79,7 @@ export function registerTeamTools(server: McpServer, client: PortainerClient, re
       role: z.number().optional().describe("Role in team (1=leader, 2=member)"),
     }, async (args) => {
       try {
-        const result = await client.post(`/api/teams/${args.id}/memberships`, {
+        const result = await client().post(`/api/teams/${args.id}/memberships`, {
           UserID: args.userId,
           Role: args.role || 2,
         });
@@ -94,7 +94,7 @@ export function registerTeamTools(server: McpServer, client: PortainerClient, re
       userId: z.number().describe("User ID to remove"),
     }, async (args) => {
       try {
-        await client.delete(`/api/teams/${args.id}/memberships/${args.userId}`);
+        await client().delete(`/api/teams/${args.id}/memberships/${args.userId}`);
         return jsonResponse({ success: true });
       } catch (e) {
         return errorResponse(e);

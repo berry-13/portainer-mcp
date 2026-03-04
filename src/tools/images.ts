@@ -1,11 +1,11 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { PortainerClient } from "../client.js";
+import { ClientAccessor } from "../client.js";
 import { jsonResponse, errorResponse } from "../utils/response.js";
 import { paginatedResponse } from "../utils/response.js";
 import { summarizeImage, summarizeImageInspect } from "../utils/filters.js";
 
-export function registerImageTools(server: McpServer, client: PortainerClient, readOnly: boolean): void {
+export function registerImageTools(server: McpServer, client: ClientAccessor, readOnly: boolean): void {
   const eid = z.number().describe("Environment/endpoint ID");
 
   server.tool("list_images", "List images in an environment", {
@@ -18,7 +18,7 @@ export function registerImageTools(server: McpServer, client: PortainerClient, r
     try {
       const query: Record<string, string> = {};
       if (args.all) query.all = "true";
-      const result = await client.get(client.dockerPath(args.endpointId, "/images/json"), query);
+      const result = await client().get(client().dockerPath(args.endpointId, "/images/json"), query);
       const items = args.full
         ? (result as Record<string, unknown>[])
         : (result as Record<string, unknown>[]).map(summarizeImage);
@@ -34,7 +34,7 @@ export function registerImageTools(server: McpServer, client: PortainerClient, r
     full: z.boolean().optional().describe("Return full Docker API response (default: summary)"),
   }, async (args) => {
     try {
-      const result = await client.get(client.dockerPath(args.endpointId, `/images/${args.id}/json`));
+      const result = await client().get(client().dockerPath(args.endpointId, `/images/${args.id}/json`));
       if (!args.full) {
         return jsonResponse(summarizeImageInspect(result as Record<string, unknown>));
       }
@@ -49,7 +49,7 @@ export function registerImageTools(server: McpServer, client: PortainerClient, r
     id: z.string().describe("Image ID or name"),
   }, async (args) => {
     try {
-      const result = await client.get(client.dockerPath(args.endpointId, `/images/${args.id}/history`));
+      const result = await client().get(client().dockerPath(args.endpointId, `/images/${args.id}/history`));
       return jsonResponse(result);
     } catch (e) {
       return errorResponse(e);
@@ -64,7 +64,7 @@ export function registerImageTools(server: McpServer, client: PortainerClient, r
     try {
       const query: Record<string, string> = { term: args.term };
       if (args.limit !== undefined) query.limit = String(args.limit);
-      const result = await client.get(client.dockerPath(args.endpointId, "/images/search"), query);
+      const result = await client().get(client().dockerPath(args.endpointId, "/images/search"), query);
       return jsonResponse(result);
     } catch (e) {
       return errorResponse(e);
@@ -76,7 +76,7 @@ export function registerImageTools(server: McpServer, client: PortainerClient, r
     id: z.string().describe("Image ID or name"),
   }, async (args) => {
     try {
-      const result = await client.get(client.dockerPath(args.endpointId, `/images/${args.id}/json`)) as Record<string, unknown>;
+      const result = await client().get(client().dockerPath(args.endpointId, `/images/${args.id}/json`)) as Record<string, unknown>;
       const config = result.Config as Record<string, unknown> | undefined;
       const rootfs = result.RootFS as Record<string, unknown> | undefined;
 
@@ -132,7 +132,7 @@ export function registerImageTools(server: McpServer, client: PortainerClient, r
   }, async (args) => {
     try {
       // Try Portainer's vulnerability endpoint
-      const result = await client.get(`/api/endpoints/${args.endpointId}/docker/images/${encodeURIComponent(args.id)}/vulnerabilities`);
+      const result = await client().get(`/api/endpoints/${args.endpointId}/docker/images/${encodeURIComponent(args.id)}/vulnerabilities`);
       return jsonResponse(result);
     } catch (e) {
       // If the endpoint doesn't exist, provide a helpful message
@@ -157,7 +157,7 @@ export function registerImageTools(server: McpServer, client: PortainerClient, r
       try {
         const query: Record<string, string> = { fromImage: args.fromImage };
         if (args.tag) query.tag = args.tag;
-        const result = await client.post(client.dockerPath(args.endpointId, "/images/create"), undefined, query);
+        const result = await client().post(client().dockerPath(args.endpointId, "/images/create"), undefined, query);
         return jsonResponse({ success: true, message: `Pulled ${args.fromImage}:${args.tag || "latest"}` });
       } catch (e) {
         return errorResponse(e);
@@ -174,7 +174,7 @@ export function registerImageTools(server: McpServer, client: PortainerClient, r
         const query: Record<string, string> = {};
         if (args.force) query.force = "true";
         if (args.noprune) query.noprune = "true";
-        const result = await client.delete(client.dockerPath(args.endpointId, `/images/${args.id}`), query);
+        const result = await client().delete(client().dockerPath(args.endpointId, `/images/${args.id}`), query);
         return jsonResponse(result);
       } catch (e) {
         return errorResponse(e);
@@ -190,7 +190,7 @@ export function registerImageTools(server: McpServer, client: PortainerClient, r
       try {
         const query: Record<string, string> = { repo: args.repo };
         if (args.tag) query.tag = args.tag;
-        await client.post(client.dockerPath(args.endpointId, `/images/${args.id}/tag`), undefined, query);
+        await client().post(client().dockerPath(args.endpointId, `/images/${args.id}/tag`), undefined, query);
         return jsonResponse({ success: true });
       } catch (e) {
         return errorResponse(e);
@@ -206,7 +206,7 @@ export function registerImageTools(server: McpServer, client: PortainerClient, r
         if (args.dangling !== undefined) {
           query.filters = JSON.stringify({ dangling: [String(args.dangling)] });
         }
-        const result = await client.post(client.dockerPath(args.endpointId, "/images/prune"), undefined, query);
+        const result = await client().post(client().dockerPath(args.endpointId, "/images/prune"), undefined, query);
         return jsonResponse(result);
       } catch (e) {
         return errorResponse(e);

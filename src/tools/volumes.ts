@@ -1,9 +1,9 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { PortainerClient } from "../client.js";
+import { ClientAccessor } from "../client.js";
 import { jsonResponse, errorResponse, paginatedResponse } from "../utils/response.js";
 
-export function registerVolumeTools(server: McpServer, client: PortainerClient, readOnly: boolean): void {
+export function registerVolumeTools(server: McpServer, client: ClientAccessor, readOnly: boolean): void {
   const eid = z.number().describe("Environment/endpoint ID");
 
   server.tool("list_volumes", "List volumes in an environment", {
@@ -12,7 +12,7 @@ export function registerVolumeTools(server: McpServer, client: PortainerClient, 
     offset: z.number().optional().describe("Items to skip"),
   }, async (args) => {
     try {
-      const result = await client.get(client.dockerPath(args.endpointId, "/volumes")) as Record<string, unknown>;
+      const result = await client().get(client().dockerPath(args.endpointId, "/volumes")) as Record<string, unknown>;
       const volumes = (result.Volumes || []) as unknown[];
       return paginatedResponse(volumes, args.limit, args.offset);
     } catch (e) {
@@ -25,7 +25,7 @@ export function registerVolumeTools(server: McpServer, client: PortainerClient, 
     name: z.string().describe("Volume name"),
   }, async (args) => {
     try {
-      const result = await client.get(client.dockerPath(args.endpointId, `/volumes/${args.name}`));
+      const result = await client().get(client().dockerPath(args.endpointId, `/volumes/${args.name}`));
       return jsonResponse(result);
     } catch (e) {
       return errorResponse(e);
@@ -46,7 +46,7 @@ export function registerVolumeTools(server: McpServer, client: PortainerClient, 
         if (args.driver) body.Driver = args.driver;
         if (args.driverOpts) body.DriverOpts = args.driverOpts;
         if (args.labels) body.Labels = args.labels;
-        const result = await client.post(client.dockerPath(args.endpointId, "/volumes/create"), body);
+        const result = await client().post(client().dockerPath(args.endpointId, "/volumes/create"), body);
         return jsonResponse(result);
       } catch (e) {
         return errorResponse(e);
@@ -61,7 +61,7 @@ export function registerVolumeTools(server: McpServer, client: PortainerClient, 
       try {
         const query: Record<string, string> = {};
         if (args.force) query.force = "true";
-        await client.delete(client.dockerPath(args.endpointId, `/volumes/${args.name}`), query);
+        await client().delete(client().dockerPath(args.endpointId, `/volumes/${args.name}`), query);
         return jsonResponse({ success: true });
       } catch (e) {
         return errorResponse(e);
@@ -72,7 +72,7 @@ export function registerVolumeTools(server: McpServer, client: PortainerClient, 
       endpointId: eid,
     }, async (args) => {
       try {
-        const result = await client.post(client.dockerPath(args.endpointId, "/volumes/prune"));
+        const result = await client().post(client().dockerPath(args.endpointId, "/volumes/prune"));
         return jsonResponse(result);
       } catch (e) {
         return errorResponse(e);

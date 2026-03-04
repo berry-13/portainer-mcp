@@ -1,11 +1,11 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { PortainerClient } from "../client.js";
+import { ClientAccessor } from "../client.js";
 import { jsonResponse, textResponse, errorResponse } from "../utils/response.js";
 import { paginatedResponse } from "../utils/response.js";
 import { summarizeContainer, summarizeContainerInspect } from "../utils/filters.js";
 
-export function registerContainerTools(server: McpServer, client: PortainerClient, readOnly: boolean): void {
+export function registerContainerTools(server: McpServer, client: ClientAccessor, readOnly: boolean): void {
   const eid = z.number().describe("Environment/endpoint ID");
 
   // Read-only tools
@@ -19,7 +19,7 @@ export function registerContainerTools(server: McpServer, client: PortainerClien
     try {
       const query: Record<string, string> = {};
       if (args.all) query.all = "true";
-      const result = await client.get(client.dockerPath(args.endpointId, "/containers/json"), query);
+      const result = await client().get(client().dockerPath(args.endpointId, "/containers/json"), query);
       const arr = result as Record<string, unknown>[];
       const items = args.full ? arr : arr.map(summarizeContainer);
       return paginatedResponse(items, args.limit, args.offset);
@@ -34,7 +34,7 @@ export function registerContainerTools(server: McpServer, client: PortainerClien
     full: z.boolean().optional().describe("Return full Docker API response (default: summary)"),
   }, async (args) => {
     try {
-      const result = await client.get(client.dockerPath(args.endpointId, `/containers/${args.id}/json`));
+      const result = await client().get(client().dockerPath(args.endpointId, `/containers/${args.id}/json`));
       if (!args.full) {
         return jsonResponse(summarizeContainerInspect(result as Record<string, unknown>));
       }
@@ -57,7 +57,7 @@ export function registerContainerTools(server: McpServer, client: PortainerClien
       query.stdout = args.stdout !== false ? "true" : "false";
       query.stderr = args.stderr !== false ? "true" : "false";
       if (args.tail) query.tail = args.tail;
-      const result = await client.get(client.dockerPath(args.endpointId, `/containers/${args.id}/logs`), query);
+      const result = await client().get(client().dockerPath(args.endpointId, `/containers/${args.id}/logs`), query);
       let text = String(result);
       if (args.filter) {
         const filterLower = args.filter.toLowerCase();
@@ -74,7 +74,7 @@ export function registerContainerTools(server: McpServer, client: PortainerClien
     id: z.string().describe("Container ID or name"),
   }, async (args) => {
     try {
-      const result = await client.get(client.dockerPath(args.endpointId, `/containers/${args.id}/stats`), { stream: "false" });
+      const result = await client().get(client().dockerPath(args.endpointId, `/containers/${args.id}/stats`), { stream: "false" });
       return jsonResponse(result);
     } catch (e) {
       return errorResponse(e);
@@ -86,7 +86,7 @@ export function registerContainerTools(server: McpServer, client: PortainerClien
     id: z.string().describe("Container ID or name"),
   }, async (args) => {
     try {
-      const result = await client.get(client.dockerPath(args.endpointId, `/containers/${args.id}/top`));
+      const result = await client().get(client().dockerPath(args.endpointId, `/containers/${args.id}/top`));
       return jsonResponse(result);
     } catch (e) {
       return errorResponse(e);
@@ -105,13 +105,13 @@ export function registerContainerTools(server: McpServer, client: PortainerClien
         AttachStdout: true,
         AttachStderr: true,
       };
-      const execResult = await client.post(
-        client.dockerPath(args.endpointId, `/containers/${args.id}/exec`),
+      const execResult = await client().post(
+        client().dockerPath(args.endpointId, `/containers/${args.id}/exec`),
         execBody
       ) as { Id: string };
 
-      const output = await client.post(
-        client.dockerPath(args.endpointId, `/exec/${execResult.Id}/start`),
+      const output = await client().post(
+        client().dockerPath(args.endpointId, `/exec/${execResult.Id}/start`),
         { Detach: false, Tty: false }
       );
       return textResponse(String(output));
@@ -131,13 +131,13 @@ export function registerContainerTools(server: McpServer, client: PortainerClien
         AttachStdout: true,
         AttachStderr: true,
       };
-      const execResult = await client.post(
-        client.dockerPath(args.endpointId, `/containers/${args.id}/exec`),
+      const execResult = await client().post(
+        client().dockerPath(args.endpointId, `/containers/${args.id}/exec`),
         execBody
       ) as { Id: string };
 
-      const output = await client.post(
-        client.dockerPath(args.endpointId, `/exec/${execResult.Id}/start`),
+      const output = await client().post(
+        client().dockerPath(args.endpointId, `/exec/${execResult.Id}/start`),
         { Detach: false, Tty: false }
       );
       return textResponse(String(output));
@@ -151,7 +151,7 @@ export function registerContainerTools(server: McpServer, client: PortainerClien
     id: z.string().describe("Container ID or name"),
   }, async (args) => {
     try {
-      const result = await client.get(client.dockerPath(args.endpointId, `/containers/${args.id}/changes`));
+      const result = await client().get(client().dockerPath(args.endpointId, `/containers/${args.id}/changes`));
       const changes = result as Array<{ Path: string; Kind: number }> | null;
       if (!changes || changes.length === 0) {
         return textResponse("No filesystem changes detected.");
@@ -179,13 +179,13 @@ export function registerContainerTools(server: McpServer, client: PortainerClien
           AttachStdout: true,
           AttachStderr: true,
         };
-        const execResult = await client.post(
-          client.dockerPath(args.endpointId, `/containers/${args.id}/exec`),
+        const execResult = await client().post(
+          client().dockerPath(args.endpointId, `/containers/${args.id}/exec`),
           execBody
         ) as { Id: string };
 
-        const output = await client.post(
-          client.dockerPath(args.endpointId, `/exec/${execResult.Id}/start`),
+        const output = await client().post(
+          client().dockerPath(args.endpointId, `/exec/${execResult.Id}/start`),
           { Detach: false, Tty: false }
         );
         const text = String(output).trim();
@@ -220,7 +220,7 @@ export function registerContainerTools(server: McpServer, client: PortainerClien
         if (args.hostConfig) body.HostConfig = args.hostConfig;
         if (args.networkingConfig) body.NetworkingConfig = args.networkingConfig;
         if (args.labels) body.Labels = args.labels;
-        const result = await client.post(client.dockerPath(args.endpointId, "/containers/create"), body, query);
+        const result = await client().post(client().dockerPath(args.endpointId, "/containers/create"), body, query);
         return jsonResponse(result);
       } catch (e) {
         return errorResponse(e);
@@ -232,7 +232,7 @@ export function registerContainerTools(server: McpServer, client: PortainerClien
       id: z.string().describe("Container ID or name"),
     }, async (args) => {
       try {
-        await client.post(client.dockerPath(args.endpointId, `/containers/${args.id}/start`));
+        await client().post(client().dockerPath(args.endpointId, `/containers/${args.id}/start`));
         return jsonResponse({ success: true });
       } catch (e) {
         return errorResponse(e);
@@ -247,7 +247,7 @@ export function registerContainerTools(server: McpServer, client: PortainerClien
       try {
         const query: Record<string, string> = {};
         if (args.t !== undefined) query.t = String(args.t);
-        await client.post(client.dockerPath(args.endpointId, `/containers/${args.id}/stop`), undefined, query);
+        await client().post(client().dockerPath(args.endpointId, `/containers/${args.id}/stop`), undefined, query);
         return jsonResponse({ success: true });
       } catch (e) {
         return errorResponse(e);
@@ -262,7 +262,7 @@ export function registerContainerTools(server: McpServer, client: PortainerClien
       try {
         const query: Record<string, string> = {};
         if (args.t !== undefined) query.t = String(args.t);
-        await client.post(client.dockerPath(args.endpointId, `/containers/${args.id}/restart`), undefined, query);
+        await client().post(client().dockerPath(args.endpointId, `/containers/${args.id}/restart`), undefined, query);
         return jsonResponse({ success: true });
       } catch (e) {
         return errorResponse(e);
@@ -279,7 +279,7 @@ export function registerContainerTools(server: McpServer, client: PortainerClien
         const query: Record<string, string> = {};
         if (args.force) query.force = "true";
         if (args.v) query.v = "true";
-        await client.delete(client.dockerPath(args.endpointId, `/containers/${args.id}`), query);
+        await client().delete(client().dockerPath(args.endpointId, `/containers/${args.id}`), query);
         return jsonResponse({ success: true });
       } catch (e) {
         return errorResponse(e);
@@ -294,7 +294,7 @@ export function registerContainerTools(server: McpServer, client: PortainerClien
       try {
         const query: Record<string, string> = {};
         if (args.signal) query.signal = args.signal;
-        await client.post(client.dockerPath(args.endpointId, `/containers/${args.id}/kill`), undefined, query);
+        await client().post(client().dockerPath(args.endpointId, `/containers/${args.id}/kill`), undefined, query);
         return jsonResponse({ success: true });
       } catch (e) {
         return errorResponse(e);
@@ -306,7 +306,7 @@ export function registerContainerTools(server: McpServer, client: PortainerClien
       id: z.string().describe("Container ID or name"),
     }, async (args) => {
       try {
-        await client.post(client.dockerPath(args.endpointId, `/containers/${args.id}/pause`));
+        await client().post(client().dockerPath(args.endpointId, `/containers/${args.id}/pause`));
         return jsonResponse({ success: true });
       } catch (e) {
         return errorResponse(e);
@@ -318,7 +318,7 @@ export function registerContainerTools(server: McpServer, client: PortainerClien
       id: z.string().describe("Container ID or name"),
     }, async (args) => {
       try {
-        await client.post(client.dockerPath(args.endpointId, `/containers/${args.id}/unpause`));
+        await client().post(client().dockerPath(args.endpointId, `/containers/${args.id}/unpause`));
         return jsonResponse({ success: true });
       } catch (e) {
         return errorResponse(e);
@@ -331,7 +331,7 @@ export function registerContainerTools(server: McpServer, client: PortainerClien
       name: z.string().describe("New container name"),
     }, async (args) => {
       try {
-        await client.post(client.dockerPath(args.endpointId, `/containers/${args.id}/rename`), undefined, { name: args.name });
+        await client().post(client().dockerPath(args.endpointId, `/containers/${args.id}/rename`), undefined, { name: args.name });
         return jsonResponse({ success: true });
       } catch (e) {
         return errorResponse(e);
@@ -358,13 +358,13 @@ export function registerContainerTools(server: McpServer, client: PortainerClien
         if (args.env) execBody.Env = args.env;
         if (args.user) execBody.User = args.user;
 
-        const execResult = await client.post(
-          client.dockerPath(args.endpointId, `/containers/${args.id}/exec`),
+        const execResult = await client().post(
+          client().dockerPath(args.endpointId, `/containers/${args.id}/exec`),
           execBody
         ) as { Id: string };
 
-        const startResult = await client.post(
-          client.dockerPath(args.endpointId, `/exec/${execResult.Id}/start`),
+        const startResult = await client().post(
+          client().dockerPath(args.endpointId, `/exec/${execResult.Id}/start`),
           { Detach: false, Tty: false }
         );
         return textResponse(String(startResult));
@@ -386,7 +386,7 @@ export function registerContainerTools(server: McpServer, client: PortainerClien
         if (args.label) {
           query.filters = JSON.stringify({ label: [args.label] });
         }
-        const containers = await client.get(client.dockerPath(args.endpointId, "/containers/json"), query) as Array<Record<string, unknown>>;
+        const containers = await client().get(client().dockerPath(args.endpointId, "/containers/json"), query) as Array<Record<string, unknown>>;
         let targets = containers;
         if (args.namePattern) {
           const re = new RegExp(args.namePattern, "i");
@@ -400,7 +400,7 @@ export function registerContainerTools(server: McpServer, client: PortainerClien
           const id = (c.Id as string).slice(0, 12);
           const name = ((c.Names as string[])?.[0] || id).replace(/^\//, "");
           try {
-            await client.post(client.dockerPath(args.endpointId, `/containers/${c.Id}/start`));
+            await client().post(client().dockerPath(args.endpointId, `/containers/${c.Id}/start`));
             results[name] = "started";
           } catch (e) {
             results[name] = `error: ${e instanceof Error ? e.message : String(e)}`;
@@ -426,7 +426,7 @@ export function registerContainerTools(server: McpServer, client: PortainerClien
         if (args.label) {
           query.filters = JSON.stringify({ label: [args.label] });
         }
-        const containers = await client.get(client.dockerPath(args.endpointId, "/containers/json"), query) as Array<Record<string, unknown>>;
+        const containers = await client().get(client().dockerPath(args.endpointId, "/containers/json"), query) as Array<Record<string, unknown>>;
         let targets = containers;
         if (args.namePattern) {
           const re = new RegExp(args.namePattern, "i");
@@ -441,7 +441,7 @@ export function registerContainerTools(server: McpServer, client: PortainerClien
         for (const c of targets) {
           const name = ((c.Names as string[])?.[0] || (c.Id as string).slice(0, 12)).replace(/^\//, "");
           try {
-            await client.post(client.dockerPath(args.endpointId, `/containers/${c.Id}/stop`), undefined, stopQuery);
+            await client().post(client().dockerPath(args.endpointId, `/containers/${c.Id}/stop`), undefined, stopQuery);
             results[name] = "stopped";
           } catch (e) {
             results[name] = `error: ${e instanceof Error ? e.message : String(e)}`;
@@ -467,7 +467,7 @@ export function registerContainerTools(server: McpServer, client: PortainerClien
         if (args.label) {
           query.filters = JSON.stringify({ label: [args.label] });
         }
-        const containers = await client.get(client.dockerPath(args.endpointId, "/containers/json"), query) as Array<Record<string, unknown>>;
+        const containers = await client().get(client().dockerPath(args.endpointId, "/containers/json"), query) as Array<Record<string, unknown>>;
         let targets = containers;
         if (args.namePattern) {
           const re = new RegExp(args.namePattern, "i");
@@ -482,7 +482,7 @@ export function registerContainerTools(server: McpServer, client: PortainerClien
         for (const c of targets) {
           const name = ((c.Names as string[])?.[0] || (c.Id as string).slice(0, 12)).replace(/^\//, "");
           try {
-            await client.post(client.dockerPath(args.endpointId, `/containers/${c.Id}/restart`), undefined, restartQuery);
+            await client().post(client().dockerPath(args.endpointId, `/containers/${c.Id}/restart`), undefined, restartQuery);
             results[name] = "restarted";
           } catch (e) {
             results[name] = `error: ${e instanceof Error ? e.message : String(e)}`;

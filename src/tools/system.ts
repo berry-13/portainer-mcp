@@ -1,12 +1,12 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { PortainerClient } from "../client.js";
+import { ClientAccessor } from "../client.js";
 import { jsonResponse, errorResponse } from "../utils/response.js";
 
-export function registerSystemTools(server: McpServer, client: PortainerClient, readOnly: boolean): void {
+export function registerSystemTools(server: McpServer, client: ClientAccessor, readOnly: boolean): void {
   server.tool("get_status", "Get Portainer system status", {}, async () => {
     try {
-      const result = await client.get("/api/system/status");
+      const result = await client().get("/api/system/status");
       return jsonResponse(result);
     } catch (e) {
       return errorResponse(e);
@@ -15,7 +15,7 @@ export function registerSystemTools(server: McpServer, client: PortainerClient, 
 
   server.tool("get_settings", "Get Portainer settings", {}, async () => {
     try {
-      const result = await client.get("/api/settings");
+      const result = await client().get("/api/settings");
       return jsonResponse(result);
     } catch (e) {
       return errorResponse(e);
@@ -28,7 +28,7 @@ export function registerSystemTools(server: McpServer, client: PortainerClient, 
 
       // Check Portainer status
       try {
-        const status = await client.get("/api/system/status");
+        const status = await client().get("/api/system/status");
         health.portainer = { status: "healthy", details: status };
       } catch (e) {
         health.portainer = { status: "unhealthy", error: e instanceof Error ? e.message : String(e) };
@@ -36,7 +36,7 @@ export function registerSystemTools(server: McpServer, client: PortainerClient, 
 
       // Check environments
       try {
-        const endpoints = await client.get("/api/endpoints") as Array<Record<string, unknown>>;
+        const endpoints = await client().get("/api/endpoints") as Array<Record<string, unknown>>;
         const envResults: Record<string, unknown>[] = [];
         for (const ep of endpoints) {
           const envHealth: Record<string, unknown> = {
@@ -48,7 +48,7 @@ export function registerSystemTools(server: McpServer, client: PortainerClient, 
           // Try Docker ping for Docker environments
           if (ep.Type === 1 || ep.Type === 2) {
             try {
-              await client.get(client.dockerPath(ep.Id as number, "/_ping"));
+              await client().get(client().dockerPath(ep.Id as number, "/_ping"));
               envHealth.docker = "reachable";
             } catch {
               envHealth.docker = "unreachable";
@@ -83,7 +83,7 @@ export function registerSystemTools(server: McpServer, client: PortainerClient, 
       if (args.type) {
         query.filters = JSON.stringify({ type: [args.type] });
       }
-      const result = await client.get(client.dockerPath(args.endpointId, "/events"), query);
+      const result = await client().get(client().dockerPath(args.endpointId, "/events"), query);
       // Events API returns newline-delimited JSON
       const text = String(result);
       if (!text.trim()) {

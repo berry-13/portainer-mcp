@@ -1,15 +1,15 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { PortainerClient } from "../client.js";
+import { ClientAccessor } from "../client.js";
 import { jsonResponse, errorResponse, paginatedResponse } from "../utils/response.js";
 
-export function registerRegistryTools(server: McpServer, client: PortainerClient, readOnly: boolean): void {
+export function registerRegistryTools(server: McpServer, client: ClientAccessor, readOnly: boolean): void {
   server.tool("list_registries", "List all registries", {
     limit: z.number().optional().describe("Max items to return"),
     offset: z.number().optional().describe("Items to skip"),
   }, async (args) => {
     try {
-      const result = await client.get("/api/registries") as unknown[];
+      const result = await client().get("/api/registries") as unknown[];
       return paginatedResponse(result, args.limit, args.offset);
     } catch (e) {
       return errorResponse(e);
@@ -20,7 +20,7 @@ export function registerRegistryTools(server: McpServer, client: PortainerClient
     id: z.number().describe("Registry ID"),
   }, async (args) => {
     try {
-      const result = await client.get(`/api/registries/${args.id}`);
+      const result = await client().get(`/api/registries/${args.id}`);
       return jsonResponse(result);
     } catch (e) {
       return errorResponse(e);
@@ -45,7 +45,7 @@ export function registerRegistryTools(server: McpServer, client: PortainerClient
         if (args.authentication !== undefined) body.Authentication = args.authentication;
         if (args.username) body.Username = args.username;
         if (args.password) body.Password = args.password;
-        const result = await client.post("/api/registries", body);
+        const result = await client().post("/api/registries", body);
         return jsonResponse(result);
       } catch (e) {
         return errorResponse(e);
@@ -67,7 +67,7 @@ export function registerRegistryTools(server: McpServer, client: PortainerClient
         if (args.authentication !== undefined) body.Authentication = args.authentication;
         if (args.username) body.Username = args.username;
         if (args.password) body.Password = args.password;
-        const result = await client.put(`/api/registries/${args.id}`, body);
+        const result = await client().put(`/api/registries/${args.id}`, body);
         return jsonResponse(result);
       } catch (e) {
         return errorResponse(e);
@@ -78,7 +78,7 @@ export function registerRegistryTools(server: McpServer, client: PortainerClient
       id: z.number().describe("Registry ID"),
     }, async (args) => {
       try {
-        await client.delete(`/api/registries/${args.id}`);
+        await client().delete(`/api/registries/${args.id}`);
         return jsonResponse({ success: true });
       } catch (e) {
         return errorResponse(e);

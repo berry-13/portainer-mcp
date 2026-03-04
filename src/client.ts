@@ -77,3 +77,10 @@ export class PortainerClient {
     return this.request("DELETE", path, undefined, query);
   }
 }
+
+/**
+ * A function that returns the currently active PortainerClient.
+ * Used by tool registrations so they resolve the client at call time,
+ * enabling runtime instance switching.
+ */
+export type ClientAccessor = () => PortainerClient;

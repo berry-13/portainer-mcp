@@ -1,9 +1,9 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { PortainerClient } from "../client.js";
+import { ClientAccessor } from "../client.js";
 import { jsonResponse, errorResponse, paginatedResponse } from "../utils/response.js";
 
-export function registerNetworkTools(server: McpServer, client: PortainerClient, readOnly: boolean): void {
+export function registerNetworkTools(server: McpServer, client: ClientAccessor, readOnly: boolean): void {
   const eid = z.number().describe("Environment/endpoint ID");
 
   server.tool("list_networks", "List networks in an environment", {
@@ -12,7 +12,7 @@ export function registerNetworkTools(server: McpServer, client: PortainerClient,
     offset: z.number().optional().describe("Items to skip"),
   }, async (args) => {
     try {
-      const result = await client.get(client.dockerPath(args.endpointId, "/networks")) as unknown[];
+      const result = await client().get(client().dockerPath(args.endpointId, "/networks")) as unknown[];
       return paginatedResponse(result, args.limit, args.offset);
     } catch (e) {
       return errorResponse(e);
@@ -24,7 +24,7 @@ export function registerNetworkTools(server: McpServer, client: PortainerClient,
     id: z.string().describe("Network ID or name"),
   }, async (args) => {
     try {
-      const result = await client.get(client.dockerPath(args.endpointId, `/networks/${args.id}`));
+      const result = await client().get(client().dockerPath(args.endpointId, `/networks/${args.id}`));
       return jsonResponse(result);
     } catch (e) {
       return errorResponse(e);
@@ -48,7 +48,7 @@ export function registerNetworkTools(server: McpServer, client: PortainerClient,
         if (args.attachable !== undefined) body.Attachable = args.attachable;
         if (args.ipam) body.IPAM = args.ipam;
         if (args.labels) body.Labels = args.labels;
-        const result = await client.post(client.dockerPath(args.endpointId, "/networks/create"), body);
+        const result = await client().post(client().dockerPath(args.endpointId, "/networks/create"), body);
         return jsonResponse(result);
       } catch (e) {
         return errorResponse(e);
@@ -60,7 +60,7 @@ export function registerNetworkTools(server: McpServer, client: PortainerClient,
       id: z.string().describe("Network ID or name"),
     }, async (args) => {
       try {
-        await client.delete(client.dockerPath(args.endpointId, `/networks/${args.id}`));
+        await client().delete(client().dockerPath(args.endpointId, `/networks/${args.id}`));
         return jsonResponse({ success: true });
       } catch (e) {
         return errorResponse(e);
@@ -73,7 +73,7 @@ export function registerNetworkTools(server: McpServer, client: PortainerClient,
       container: z.string().describe("Container ID or name"),
     }, async (args) => {
       try {
-        await client.post(client.dockerPath(args.endpointId, `/networks/${args.id}/connect`), { Container: args.container });
+        await client().post(client().dockerPath(args.endpointId, `/networks/${args.id}/connect`), { Container: args.container });
         return jsonResponse({ success: true });
       } catch (e) {
         return errorResponse(e);
@@ -87,7 +87,7 @@ export function registerNetworkTools(server: McpServer, client: PortainerClient,
       force: z.boolean().optional().describe("Force disconnect"),
     }, async (args) => {
       try {
-        await client.post(client.dockerPath(args.endpointId, `/networks/${args.id}/disconnect`), {
+        await client().post(client().dockerPath(args.endpointId, `/networks/${args.id}/disconnect`), {
           Container: args.container,
           Force: args.force || false,
         });
@@ -101,7 +101,7 @@ export function registerNetworkTools(server: McpServer, client: PortainerClient,
       endpointId: eid,
     }, async (args) => {
       try {
-        const result = await client.post(client.dockerPath(args.endpointId, "/networks/prune"));
+        const result = await client().post(client().dockerPath(args.endpointId, "/networks/prune"));
         return jsonResponse(result);
       } catch (e) {
         return errorResponse(e);

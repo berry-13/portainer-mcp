@@ -1,15 +1,14 @@
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { PortainerClient } from "./client.js";
+import { ClientAccessor } from "./client.js";
 
-export function registerResources(server: McpServer, client: PortainerClient): void {
-  // Static resource: list of all environments
+export function registerResources(server: McpServer, client: ClientAccessor): void {
   server.resource(
     "environments",
     "portainer://environments",
     { description: "List of all Portainer environments/endpoints", mimeType: "application/json" },
     async () => {
       try {
-        const result = await client.get("/api/endpoints");
+        const result = await client().get("/api/endpoints");
         return {
           contents: [{
             uri: "portainer://environments",
@@ -23,14 +22,13 @@ export function registerResources(server: McpServer, client: PortainerClient): v
     }
   );
 
-  // Static resource: system status
   server.resource(
     "system-status",
     "portainer://system/status",
     { description: "Portainer system status", mimeType: "application/json" },
     async () => {
       try {
-        const result = await client.get("/api/system/status");
+        const result = await client().get("/api/system/status");
         return {
           contents: [{
             uri: "portainer://system/status",
@@ -44,7 +42,6 @@ export function registerResources(server: McpServer, client: PortainerClient): v
     }
   );
 
-  // Resource template: environment details by ID
   server.resource(
     "environment",
     new ResourceTemplate("portainer://environments/{id}", { list: undefined }),
@@ -52,7 +49,7 @@ export function registerResources(server: McpServer, client: PortainerClient): v
     async (uri, params) => {
       const id = params.id as string;
       try {
-        const result = await client.get(`/api/endpoints/${id}`);
+        const result = await client().get(`/api/endpoints/${id}`);
         return {
           contents: [{
             uri: uri.href,
@@ -66,7 +63,6 @@ export function registerResources(server: McpServer, client: PortainerClient): v
     }
   );
 
-  // Resource template: containers in an environment
   server.resource(
     "containers",
     new ResourceTemplate("portainer://environments/{id}/containers", { list: undefined }),
@@ -74,7 +70,7 @@ export function registerResources(server: McpServer, client: PortainerClient): v
     async (uri, params) => {
       const id = params.id as string;
       try {
-        const result = await client.get(client.dockerPath(Number(id), "/containers/json"), { all: "true" });
+        const result = await client().get(client().dockerPath(Number(id), "/containers/json"), { all: "true" });
         return {
           contents: [{
             uri: uri.href,
@@ -88,14 +84,13 @@ export function registerResources(server: McpServer, client: PortainerClient): v
     }
   );
 
-  // Resource template: stacks
   server.resource(
     "stacks",
     "portainer://stacks",
     { description: "List of all Portainer stacks", mimeType: "application/json" },
     async () => {
       try {
-        const result = await client.get("/api/stacks");
+        const result = await client().get("/api/stacks");
         return {
           contents: [{
             uri: "portainer://stacks",

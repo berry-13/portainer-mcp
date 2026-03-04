@@ -1,17 +1,17 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { PortainerClient } from "../client.js";
+import { ClientAccessor } from "../client.js";
 import { jsonResponse, textResponse, errorResponse, paginatedResponse } from "../utils/response.js";
 import { validateCompose } from "../utils/compose.js";
 import { diffComposeServices } from "../utils/diff.js";
 
-export function registerStackTools(server: McpServer, client: PortainerClient, readOnly: boolean): void {
+export function registerStackTools(server: McpServer, client: ClientAccessor, readOnly: boolean): void {
   server.tool("list_stacks", "List all stacks", {
     limit: z.number().optional().describe("Max items to return"),
     offset: z.number().optional().describe("Items to skip"),
   }, async (args) => {
     try {
-      const result = await client.get("/api/stacks") as unknown[];
+      const result = await client().get("/api/stacks") as unknown[];
       return paginatedResponse(result, args.limit, args.offset);
     } catch (e) {
       return errorResponse(e);
@@ -22,7 +22,7 @@ export function registerStackTools(server: McpServer, client: PortainerClient, r
     id: z.number().describe("Stack ID"),
   }, async (args) => {
     try {
-      const result = await client.get(`/api/stacks/${args.id}`);
+      const result = await client().get(`/api/stacks/${args.id}`);
       return jsonResponse(result);
     } catch (e) {
       return errorResponse(e);
@@ -33,7 +33,7 @@ export function registerStackTools(server: McpServer, client: PortainerClient, r
     id: z.number().describe("Stack ID"),
   }, async (args) => {
     try {
-      const result = await client.get(`/api/stacks/${args.id}/file`);
+      const result = await client().get(`/api/stacks/${args.id}/file`);
       return jsonResponse(result);
     } catch (e) {
       return errorResponse(e);
@@ -56,7 +56,7 @@ export function registerStackTools(server: McpServer, client: PortainerClient, r
     proposedContent: z.string().describe("Proposed new Docker Compose file content"),
   }, async (args) => {
     try {
-      const stackFile = await client.get(`/api/stacks/${args.id}/file`) as Record<string, unknown>;
+      const stackFile = await client().get(`/api/stacks/${args.id}/file`) as Record<string, unknown>;
       const currentContent = stackFile.StackFileContent as string;
       const result = diffComposeServices(currentContent, args.proposedContent);
       return jsonResponse({
@@ -93,7 +93,7 @@ export function registerStackTools(server: McpServer, client: PortainerClient, r
           StackFileContent: args.stackFileContent,
         };
         if (args.env) body.Env = args.env;
-        const result = await client.post(
+        const result = await client().post(
           "/api/stacks/create/standalone/string",
           body,
           { endpointId: String(args.endpointId) }
@@ -126,7 +126,7 @@ export function registerStackTools(server: McpServer, client: PortainerClient, r
         if (args.env) body.Env = args.env;
         if (args.prune !== undefined) body.Prune = args.prune;
         if (args.pullImage !== undefined) body.PullImage = args.pullImage;
-        const result = await client.put(
+        const result = await client().put(
           `/api/stacks/${args.id}`,
           body,
           { endpointId: String(args.endpointId) }
@@ -142,7 +142,7 @@ export function registerStackTools(server: McpServer, client: PortainerClient, r
       endpointId: z.number().describe("Environment/endpoint ID"),
     }, async (args) => {
       try {
-        await client.delete(`/api/stacks/${args.id}`, { endpointId: String(args.endpointId) });
+        await client().delete(`/api/stacks/${args.id}`, { endpointId: String(args.endpointId) });
         return jsonResponse({ success: true });
       } catch (e) {
         return errorResponse(e);
@@ -154,7 +154,7 @@ export function registerStackTools(server: McpServer, client: PortainerClient, r
       endpointId: z.number().describe("Environment/endpoint ID"),
     }, async (args) => {
       try {
-        const result = await client.post(`/api/stacks/${args.id}/start`, undefined, { endpointId: String(args.endpointId) });
+        const result = await client().post(`/api/stacks/${args.id}/start`, undefined, { endpointId: String(args.endpointId) });
         return jsonResponse(result);
       } catch (e) {
         return errorResponse(e);
@@ -166,7 +166,7 @@ export function registerStackTools(server: McpServer, client: PortainerClient, r
       endpointId: z.number().describe("Environment/endpoint ID"),
     }, async (args) => {
       try {
-        const result = await client.post(`/api/stacks/${args.id}/stop`, undefined, { endpointId: String(args.endpointId) });
+        const result = await client().post(`/api/stacks/${args.id}/stop`, undefined, { endpointId: String(args.endpointId) });
         return jsonResponse(result);
       } catch (e) {
         return errorResponse(e);
@@ -183,13 +183,13 @@ export function registerStackTools(server: McpServer, client: PortainerClient, r
         const steps: string[] = [];
 
         // Get current stack file
-        const stackFile = await client.get(`/api/stacks/${args.id}/file`) as Record<string, unknown>;
+        const stackFile = await client().get(`/api/stacks/${args.id}/file`) as Record<string, unknown>;
         const fileContent = stackFile.StackFileContent as string;
         steps.push("Retrieved current stack file");
 
         // Stop the stack
         try {
-          await client.post(`/api/stacks/${args.id}/stop`, undefined, { endpointId: String(args.endpointId) });
+          await client().post(`/api/stacks/${args.id}/stop`, undefined, { endpointId: String(args.endpointId) });
           steps.push("Stopped stack");
         } catch {
           steps.push("Stack was already stopped (or stop failed, continuing)");
@@ -201,11 +201,11 @@ export function registerStackTools(server: McpServer, client: PortainerClient, r
           PullImage: args.pullImage !== false,
           Prune: args.prune !== false,
         };
-        await client.put(`/api/stacks/${args.id}`, body, { endpointId: String(args.endpointId) });
+        await client().put(`/api/stacks/${args.id}`, body, { endpointId: String(args.endpointId) });
         steps.push("Updated stack (pulled images)");
 
         // Start the stack
-        await client.post(`/api/stacks/${args.id}/start`, undefined, { endpointId: String(args.endpointId) });
+        await client().post(`/api/stacks/${args.id}/start`, undefined, { endpointId: String(args.endpointId) });
         steps.push("Started stack");
 
         return jsonResponse({ success: true, steps });

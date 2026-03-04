@@ -1,15 +1,15 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { PortainerClient } from "../client.js";
+import { ClientAccessor } from "../client.js";
 import { jsonResponse, errorResponse, paginatedResponse } from "../utils/response.js";
 
-export function registerTemplateTools(server: McpServer, client: PortainerClient, readOnly: boolean): void {
+export function registerTemplateTools(server: McpServer, client: ClientAccessor, readOnly: boolean): void {
   server.tool("list_templates", "List all app templates", {
     limit: z.number().optional().describe("Max items to return"),
     offset: z.number().optional().describe("Items to skip"),
   }, async (args) => {
     try {
-      const result = await client.get("/api/templates") as unknown[];
+      const result = await client().get("/api/templates") as unknown[];
       return paginatedResponse(result, args.limit, args.offset);
     } catch (e) {
       return errorResponse(e);
@@ -21,7 +21,7 @@ export function registerTemplateTools(server: McpServer, client: PortainerClient
     offset: z.number().optional().describe("Items to skip"),
   }, async (args) => {
     try {
-      const result = await client.get("/api/custom_templates") as unknown[];
+      const result = await client().get("/api/custom_templates") as unknown[];
       return paginatedResponse(result, args.limit, args.offset);
     } catch (e) {
       return errorResponse(e);
@@ -32,7 +32,7 @@ export function registerTemplateTools(server: McpServer, client: PortainerClient
     id: z.number().describe("Custom template ID"),
   }, async (args) => {
     try {
-      const result = await client.get(`/api/custom_templates/${args.id}`);
+      const result = await client().get(`/api/custom_templates/${args.id}`);
       return jsonResponse(result);
     } catch (e) {
       return errorResponse(e);
@@ -59,7 +59,7 @@ export function registerTemplateTools(server: McpServer, client: PortainerClient
         if (args.platform !== undefined) body.Platform = args.platform;
         if (args.note) body.Note = args.note;
         if (args.logo) body.Logo = args.logo;
-        const result = await client.post("/api/custom_templates", body);
+        const result = await client().post("/api/custom_templates", body);
         return jsonResponse(result);
       } catch (e) {
         return errorResponse(e);
@@ -81,7 +81,7 @@ export function registerTemplateTools(server: McpServer, client: PortainerClient
         if (args.fileContent) body.FileContent = args.fileContent;
         if (args.note) body.Note = args.note;
         if (args.logo) body.Logo = args.logo;
-        const result = await client.put(`/api/custom_templates/${args.id}`, body);
+        const result = await client().put(`/api/custom_templates/${args.id}`, body);
         return jsonResponse(result);
       } catch (e) {
         return errorResponse(e);
@@ -92,7 +92,7 @@ export function registerTemplateTools(server: McpServer, client: PortainerClient
       id: z.number().describe("Custom template ID"),
     }, async (args) => {
       try {
-        await client.delete(`/api/custom_templates/${args.id}`);
+        await client().delete(`/api/custom_templates/${args.id}`);
         return jsonResponse({ success: true });
       } catch (e) {
         return errorResponse(e);

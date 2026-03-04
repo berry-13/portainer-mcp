@@ -1,15 +1,15 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { PortainerClient } from "../client.js";
+import { ClientAccessor } from "../client.js";
 import { jsonResponse, errorResponse, paginatedResponse } from "../utils/response.js";
 
-export function registerEnvironmentTools(server: McpServer, client: PortainerClient, readOnly: boolean): void {
+export function registerEnvironmentTools(server: McpServer, client: ClientAccessor, readOnly: boolean): void {
   server.tool("list_environments", "List all Portainer environments/endpoints", {
     limit: z.number().optional().describe("Max items to return"),
     offset: z.number().optional().describe("Items to skip"),
   }, async (args) => {
     try {
-      const result = await client.get("/api/endpoints") as unknown[];
+      const result = await client().get("/api/endpoints") as unknown[];
       return paginatedResponse(result, args.limit, args.offset);
     } catch (e) {
       return errorResponse(e);
@@ -20,7 +20,7 @@ export function registerEnvironmentTools(server: McpServer, client: PortainerCli
     id: z.number().describe("Environment/endpoint ID"),
   }, async (args) => {
     try {
-      const result = await client.get(`/api/endpoints/${args.id}`);
+      const result = await client().get(`/api/endpoints/${args.id}`);
       return jsonResponse(result);
     } catch (e) {
       return errorResponse(e);
@@ -45,7 +45,7 @@ export function registerEnvironmentTools(server: McpServer, client: PortainerCli
         if (args.publicURL) body.PublicURL = args.publicURL;
         if (args.groupId) body.GroupID = args.groupId;
         if (args.tagIds) body.TagIDs = args.tagIds;
-        const result = await client.post("/api/endpoints", body);
+        const result = await client().post("/api/endpoints", body);
         return jsonResponse(result);
       } catch (e) {
         return errorResponse(e);
@@ -65,7 +65,7 @@ export function registerEnvironmentTools(server: McpServer, client: PortainerCli
         if (args.publicURL) body.PublicURL = args.publicURL;
         if (args.groupId) body.GroupID = args.groupId;
         if (args.tagIds) body.TagIDs = args.tagIds;
-        const result = await client.put(`/api/endpoints/${args.id}`, body);
+        const result = await client().put(`/api/endpoints/${args.id}`, body);
         return jsonResponse(result);
       } catch (e) {
         return errorResponse(e);
@@ -76,7 +76,7 @@ export function registerEnvironmentTools(server: McpServer, client: PortainerCli
       id: z.number().describe("Environment/endpoint ID"),
     }, async (args) => {
       try {
-        await client.delete(`/api/endpoints/${args.id}`);
+        await client().delete(`/api/endpoints/${args.id}`);
         return jsonResponse({ success: true });
       } catch (e) {
         return errorResponse(e);

@@ -1,5 +1,5 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { PortainerClient } from "../client.js";
+import { ClientAccessor } from "../client.js";
 import { registerSystemTools } from "./system.js";
 import { registerEnvironmentTools } from "./environments.js";
 import { registerContainerTools } from "./containers.js";
@@ -14,7 +14,7 @@ import { registerTemplateTools } from "./templates.js";
 import { registerTagTools } from "./tags.js";
 import { registerWebhookTools } from "./webhooks.js";
 
-export function registerAllTools(server: McpServer, client: PortainerClient, readOnly: boolean): void {
+export function registerAllTools(server: McpServer, client: ClientAccessor, readOnly: boolean): void {
   registerSystemTools(server, client, readOnly);
   registerEnvironmentTools(server, client, readOnly);
   registerContainerTools(server, client, readOnly);

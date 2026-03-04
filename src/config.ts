@@ -1,5 +1,13 @@
 export type TransportType = "stdio" | "http";
 
+export interface InstanceConfig {
+  name: string;
+  url: string;
+  token: string;
+  skipTlsVerify?: boolean;
+  timeout?: number;
+}
+
 export interface Config {
   server: string;
   token: string;
@@ -8,6 +16,7 @@ export interface Config {
   timeout: number;
   transport: TransportType;
   port: number;
+  instances: InstanceConfig[];
 }
 
 export function parseConfig(): Config {
@@ -20,6 +29,7 @@ export function parseConfig(): Config {
   let timeout: number | undefined;
   let transport: TransportType = "stdio";
   let port: number | undefined;
+  let instancesJson: string | undefined;
 
   for (let i = 0; i < args.length; i++) {
     switch (args[i]) {
@@ -43,6 +53,9 @@ export function parseConfig(): Config {
         break;
       case "--port":
         port = parseInt(args[++i], 10);
+        break;
+      case "--instances":
+        instancesJson = args[++i];
         break;
     }
   }
@@ -78,5 +91,17 @@ export function parseConfig(): Config {
   // Remove trailing slash
   server = server.replace(/\/+$/, "");
 
-  return { server, token, readOnly, skipTlsVerify, timeout: timeout || 30000, transport, port: port || 3000 };
+  // Parse additional instances
+  let instances: InstanceConfig[] = [];
+  const rawInstances = instancesJson || process.env.PORTAINER_INSTANCES;
+  if (rawInstances) {
+    try {
+      instances = JSON.parse(rawInstances);
+    } catch {
+      console.error("Error: --instances must be valid JSON array");
+      process.exit(1);
+    }
+  }
+
+  return { server, token, readOnly, skipTlsVerify, timeout: timeout || 30000, transport, port: port || 3000, instances };
 }
