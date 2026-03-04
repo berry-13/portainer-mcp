@@ -14,6 +14,14 @@ import { registerTemplateTools } from "./templates.js";
 import { registerTagTools } from "./tags.js";
 import { registerWebhookTools } from "./webhooks.js";
 
+/**
+ * Registers all Portainer MCP tools on the server. Includes tools for
+ * system, environments, containers, images, volumes, networks, stacks,
+ * registries, users, teams, templates, tags, and webhooks.
+ * @param server - The MCP server to register tools on
+ * @param client - Accessor function that returns the active PortainerClient
+ * @param readOnly - When true, write/mutating tools are not registered
+ */
 export function registerAllTools(server: McpServer, client: ClientAccessor, readOnly: boolean): void {
   registerSystemTools(server, client, readOnly);
   registerEnvironmentTools(server, client, readOnly);

@@ -12,6 +12,45 @@ const config = parseConfig();
 if (config.transport === "http") {
   const sessions = new Map<string, { server: ReturnType<typeof createServer>; transport: StreamableHTTPServerTransport }>();
 
+  // --- Rate limiter ---
+  const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+  const RATE_LIMIT_WINDOW_MS = 60_000; // 1 minute
+
+  function getClientIp(req: IncomingMessage): string {
+    // Support proxied requests via X-Forwarded-For, fall back to socket address
+    const forwarded = req.headers["x-forwarded-for"];
+    if (typeof forwarded === "string") {
+      return forwarded.split(",")[0].trim();
+    }
+    return req.socket.remoteAddress || "unknown";
+  }
+
+  function isRateLimited(ip: string): boolean {
+    const now = Date.now();
+    const entry = rateLimitMap.get(ip);
+    if (!entry || now >= entry.resetTime) {
+      // First request in this window or window expired
+      rateLimitMap.set(ip, { count: 1, resetTime: now + RATE_LIMIT_WINDOW_MS });
+      return false;
+    }
+    entry.count++;
+    if (entry.count > config.rateLimit) {
+      return true;
+    }
+    return false;
+  }
+
+  // Auto-cleanup expired entries every 60 seconds to prevent memory leak
+  const rateLimitCleanupInterval = setInterval(() => {
+    const now = Date.now();
+    for (const [ip, entry] of rateLimitMap) {
+      if (now >= entry.resetTime) {
+        rateLimitMap.delete(ip);
+      }
+    }
+  }, 60_000);
+  rateLimitCleanupInterval.unref(); // Don't prevent process exit
+
   const httpServer = createHttpServer(async (req: IncomingMessage, res: ServerResponse) => {
     const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
 
@@ -24,6 +63,21 @@ if (config.transport === "http") {
     if (req.method === "OPTIONS") {
       res.writeHead(204);
       res.end();
+      return;
+    }
+
+    // Rate limiting
+    const clientIp = getClientIp(req);
+    if (isRateLimited(clientIp)) {
+      const entry = rateLimitMap.get(clientIp);
+      const retryAfter = entry ? Math.ceil((entry.resetTime - Date.now()) / 1000) : 60;
+      res.setHeader("Retry-After", String(retryAfter));
+      res.writeHead(429);
+      res.end(JSON.stringify({
+        jsonrpc: "2.0",
+        error: { code: -32000, message: "Too many requests. Please retry later." },
+        id: null,
+      }));
       return;
     }
 
@@ -134,6 +188,7 @@ if (config.transport === "http") {
 
   process.on("SIGINT", () => {
     console.error("Shutting down...");
+    clearInterval(rateLimitCleanupInterval);
     for (const [, session] of sessions) {
       session.transport.close();
       session.server.close();

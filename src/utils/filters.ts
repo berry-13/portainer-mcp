@@ -1,3 +1,8 @@
+/**
+ * Extracts key fields from a Docker container list entry for concise display.
+ * @param c - Raw container object from the Docker API
+ * @returns Summarized container with Id (truncated), Names, Image, State, Status, Created, Ports, Labels
+ */
 export function summarizeContainer(c: Record<string, unknown>): Record<string, unknown> {
   return {
     Id: typeof c.Id === "string" ? c.Id.slice(0, 12) : c.Id,
@@ -11,6 +16,12 @@ export function summarizeContainer(c: Record<string, unknown>): Record<string, u
   };
 }
 
+/**
+ * Extracts key fields from a Docker container inspect response for concise display.
+ * Includes state, config, networking, and mount information.
+ * @param c - Raw container inspect object from the Docker API
+ * @returns Summarized container with state, image, env, cmd, labels, ports, mounts, and restart policy
+ */
 export function summarizeContainerInspect(c: Record<string, unknown>): Record<string, unknown> {
   const state = c.State as Record<string, unknown> | undefined;
   const config = c.Config as Record<string, unknown> | undefined;
@@ -32,6 +43,11 @@ export function summarizeContainerInspect(c: Record<string, unknown>): Record<st
   };
 }
 
+/**
+ * Extracts key fields from a Docker image list entry for concise display.
+ * @param img - Raw image object from the Docker API
+ * @returns Summarized image with Id (truncated), RepoTags, RepoDigests, Created, Size, Labels
+ */
 export function summarizeImage(img: Record<string, unknown>): Record<string, unknown> {
   return {
     Id: typeof img.Id === "string" ? img.Id.slice(0, 19) : img.Id,
@@ -43,6 +59,12 @@ export function summarizeImage(img: Record<string, unknown>): Record<string, unk
   };
 }
 
+/**
+ * Extracts key fields from a Docker image inspect response for concise display.
+ * Includes architecture, OS, config, and authorship information.
+ * @param img - Raw image inspect object from the Docker API
+ * @returns Summarized image with architecture, OS, env, cmd, exposed ports, labels, and volumes
+ */
 export function summarizeImageInspect(img: Record<string, unknown>): Record<string, unknown> {
   const config = img.Config as Record<string, unknown> | undefined;
   return {

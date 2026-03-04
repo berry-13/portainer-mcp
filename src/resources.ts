@@ -1,6 +1,12 @@
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { ClientAccessor } from "./client.js";
 
+/**
+ * Registers MCP resources that expose Portainer data as readable URIs.
+ * Provides resources for environments, system status, containers, and stacks.
+ * @param server - The MCP server to register resources on
+ * @param client - Accessor function that returns the active PortainerClient
+ */
 export function registerResources(server: McpServer, client: ClientAccessor): void {
   server.resource(
     "environments",
@@ -16,7 +22,8 @@ export function registerResources(server: McpServer, client: ClientAccessor): vo
             text: JSON.stringify(result),
           }],
         };
-      } catch {
+      } catch (e) {
+        console.error("Resource error (environments):", e instanceof Error ? e.message : e);
         return { contents: [{ uri: "portainer://environments", mimeType: "text/plain", text: "Failed to fetch environments" }] };
       }
     }
@@ -36,7 +43,8 @@ export function registerResources(server: McpServer, client: ClientAccessor): vo
             text: JSON.stringify(result),
           }],
         };
-      } catch {
+      } catch (e) {
+        console.error("Resource error (system/status):", e instanceof Error ? e.message : e);
         return { contents: [{ uri: "portainer://system/status", mimeType: "text/plain", text: "Failed to fetch status" }] };
       }
     }
@@ -57,7 +65,8 @@ export function registerResources(server: McpServer, client: ClientAccessor): vo
             text: JSON.stringify(result),
           }],
         };
-      } catch {
+      } catch (e) {
+        console.error(`Resource error (environment ${id}):`, e instanceof Error ? e.message : e);
         return { contents: [{ uri: uri.href, mimeType: "text/plain", text: `Failed to fetch environment ${id}` }] };
       }
     }
@@ -78,7 +87,8 @@ export function registerResources(server: McpServer, client: ClientAccessor): vo
             text: JSON.stringify(result),
           }],
         };
-      } catch {
+      } catch (e) {
+        console.error(`Resource error (containers env ${id}):`, e instanceof Error ? e.message : e);
         return { contents: [{ uri: uri.href, mimeType: "text/plain", text: `Failed to fetch containers for environment ${id}` }] };
       }
     }
@@ -98,7 +108,8 @@ export function registerResources(server: McpServer, client: ClientAccessor): vo
             text: JSON.stringify(result),
           }],
         };
-      } catch {
+      } catch (e) {
+        console.error("Resource error (stacks):", e instanceof Error ? e.message : e);
         return { contents: [{ uri: "portainer://stacks", mimeType: "text/plain", text: "Failed to fetch stacks" }] };
       }
     }

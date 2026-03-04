@@ -249,7 +249,6 @@ export function registerStackTools(server: McpServer, client: ClientAccessor, re
         }
 
         // Validate the rollback content
-        const { validateCompose } = await import("../utils/compose.js");
         const validation = validateCompose(rollbackContent);
         if (!validation.valid) {
           return errorResponse(new Error(`Rollback content validation failed: ${validation.errors.join("; ")}`));

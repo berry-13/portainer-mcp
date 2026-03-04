@@ -5,6 +5,13 @@ import { registerResources } from "./resources.js";
 import { InstanceManager } from "./instances.js";
 import { Config } from "./config.js";
 
+/**
+ * Creates and configures the MCP server with all Portainer tools and resources.
+ * Sets up the instance manager, registers tools (respecting read-only mode),
+ * and registers MCP resources.
+ * @param config - Application configuration
+ * @returns A fully configured McpServer ready to be connected to a transport
+ */
 export function createServer(config: Config): McpServer {
   const server = new McpServer({
     name: "portainer-mcp",

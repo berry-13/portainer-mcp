@@ -1,9 +1,26 @@
+/**
+ * HTTP client for the Portainer REST API. Handles authentication,
+ * TLS configuration, and request timeouts.
+ *
+ * @example
+ * ```ts
+ * const client = new PortainerClient("https://portainer.example.com", "my-api-token", false);
+ * const endpoints = await client.get("/api/endpoints");
+ * ```
+ */
 export class PortainerClient {
   private baseUrl: string;
   private token: string;
   private timeout: number;
   private skipTlsVerify: boolean;
 
+  /**
+   * Creates a new PortainerClient instance.
+   * @param baseUrl - Base URL of the Portainer server (e.g. "https://portainer.example.com")
+   * @param token - Portainer API key for authentication
+   * @param skipTlsVerify - Whether to skip TLS certificate verification
+   * @param timeout - Request timeout in milliseconds
+   */
   constructor(baseUrl: string, token: string, skipTlsVerify: boolean, timeout: number = 30000) {
     this.baseUrl = baseUrl;
     this.token = token;
@@ -11,6 +28,12 @@ export class PortainerClient {
     this.skipTlsVerify = skipTlsVerify;
   }
 
+  /**
+   * Builds the Docker API proxy path for a given Portainer environment.
+   * @param endpointId - The Portainer environment/endpoint ID
+   * @param path - The Docker API path (e.g. "/containers/json")
+   * @returns The full API path for proxied Docker requests
+   */
   dockerPath(endpointId: number, path: string): string {
     return `/api/endpoints/${endpointId}/docker${path}`;
   }
@@ -72,18 +95,48 @@ export class PortainerClient {
     }
   }
 
+  /**
+   * Sends a GET request to the Portainer API.
+   * @param path - API path (e.g. "/api/endpoints")
+   * @param query - Optional query string parameters
+   * @returns The parsed JSON response or text
+   * @throws Error if the request fails or times out
+   */
   async get(path: string, query?: Record<string, string>): Promise<unknown> {
     return this.request("GET", path, undefined, query);
   }
 
+  /**
+   * Sends a POST request to the Portainer API.
+   * @param path - API path
+   * @param body - Optional JSON request body
+   * @param query - Optional query string parameters
+   * @returns The parsed JSON response or text
+   * @throws Error if the request fails or times out
+   */
   async post(path: string, body?: unknown, query?: Record<string, string>): Promise<unknown> {
     return this.request("POST", path, body, query);
   }
 
+  /**
+   * Sends a PUT request to the Portainer API.
+   * @param path - API path
+   * @param body - Optional JSON request body
+   * @param query - Optional query string parameters
+   * @returns The parsed JSON response or text
+   * @throws Error if the request fails or times out
+   */
   async put(path: string, body?: unknown, query?: Record<string, string>): Promise<unknown> {
     return this.request("PUT", path, body, query);
   }
 
+  /**
+   * Sends a DELETE request to the Portainer API.
+   * @param path - API path
+   * @param query - Optional query string parameters
+   * @returns The parsed JSON response or text
+   * @throws Error if the request fails or times out
+   */
   async delete(path: string, query?: Record<string, string>): Promise<unknown> {
     return this.request("DELETE", path, undefined, query);
   }

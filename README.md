@@ -323,6 +323,7 @@ services:
 | `--timeout` | `PORTAINER_TIMEOUT` | `30000` | Request timeout (ms) |
 | `--transport` | `PORTAINER_TRANSPORT` | `stdio` | Transport: `stdio` or `http` |
 | `--port` | `PORTAINER_PORT` | `3000` | HTTP server port |
+| `--rate-limit` | `PORTAINER_RATE_LIMIT` | `100` | Max requests/min per IP (HTTP) |
 | `--instances` | `PORTAINER_INSTANCES` | `[]` | Additional instances (JSON) |
 
 CLI flags take precedence over environment variables.

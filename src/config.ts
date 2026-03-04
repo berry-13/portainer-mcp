@@ -1,24 +1,50 @@
+/** MCP server transport protocol. */
 export type TransportType = "stdio" | "http";
 
+/** Configuration for an additional Portainer instance in multi-instance mode. */
 export interface InstanceConfig {
+  /** Display name for this instance */
   name: string;
+  /** Base URL of the Portainer server */
   url: string;
+  /** API token for authentication */
   token: string;
+  /** Whether to skip TLS certificate verification */
   skipTlsVerify?: boolean;
+  /** Request timeout in milliseconds */
   timeout?: number;
 }
 
+/**
+ * Application configuration parsed from CLI arguments and environment variables.
+ */
 export interface Config {
+  /** Base URL of the primary Portainer server */
   server: string;
+  /** API token for the primary Portainer server */
   token: string;
+  /** When true, write operations (create, update, delete) are disabled */
   readOnly: boolean;
+  /** Whether to skip TLS certificate verification */
   skipTlsVerify: boolean;
+  /** Request timeout in milliseconds */
   timeout: number;
+  /** MCP transport protocol */
   transport: TransportType;
+  /** HTTP server port (only used when transport is "http") */
   port: number;
+  /** Maximum number of requests per minute for HTTP transport */
+  rateLimit: number;
+  /** Additional Portainer instances for multi-instance mode */
   instances: InstanceConfig[];
 }
 
+/**
+ * Parses application configuration from CLI arguments and environment variables.
+ * CLI arguments take precedence over environment variables.
+ * @returns The parsed configuration object
+ * @throws Exits the process if required --server/--token values are missing
+ */
 export function parseConfig(): Config {
   const args = process.argv.slice(2);
 
@@ -29,6 +55,7 @@ export function parseConfig(): Config {
   let timeout: number | undefined;
   let transport: TransportType = "stdio";
   let port: number | undefined;
+  let rateLimit: number | undefined;
   let instancesJson: string | undefined;
 
   for (let i = 0; i < args.length; i++) {
@@ -58,6 +85,11 @@ export function parseConfig(): Config {
         if (!isNaN(parsed)) port = parsed;
         break;
       }
+      case "--rate-limit": {
+        const parsed = parseInt(args[++i], 10);
+        if (!isNaN(parsed)) rateLimit = parsed;
+        break;
+      }
       case "--instances":
         instancesJson = args[++i];
         break;
@@ -84,6 +116,10 @@ export function parseConfig(): Config {
     const parsed = parseInt(process.env.PORTAINER_PORT, 10);
     if (!isNaN(parsed)) port = parsed;
   }
+  if (rateLimit === undefined && process.env.PORTAINER_RATE_LIMIT) {
+    const parsed = parseInt(process.env.PORTAINER_RATE_LIMIT, 10);
+    if (!isNaN(parsed)) rateLimit = parsed;
+  }
 
   if (!server) {
     console.error("Error: --server or PORTAINER_URL is required");
@@ -109,5 +145,5 @@ export function parseConfig(): Config {
     }
   }
 
-  return { server, token, readOnly, skipTlsVerify, timeout: timeout || 30000, transport, port: port || 3000, instances };
+  return { server, token, readOnly, skipTlsVerify, timeout: timeout || 30000, transport, port: port || 3000, rateLimit: rateLimit || 100, instances };
 }
