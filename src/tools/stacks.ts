@@ -3,6 +3,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { PortainerClient } from "../client.js";
 import { jsonResponse, textResponse, errorResponse, paginatedResponse } from "../utils/response.js";
 import { validateCompose } from "../utils/compose.js";
+import { diffComposeServices } from "../utils/diff.js";
 
 export function registerStackTools(server: McpServer, client: PortainerClient, readOnly: boolean): void {
   server.tool("list_stacks", "List all stacks", {
@@ -45,6 +46,28 @@ export function registerStackTools(server: McpServer, client: PortainerClient, r
     try {
       const result = validateCompose(args.content);
       return jsonResponse(result);
+    } catch (e) {
+      return errorResponse(e);
+    }
+  });
+
+  server.tool("diff_stack", "Compare a stack's current compose file with a proposed new version", {
+    id: z.number().describe("Stack ID"),
+    proposedContent: z.string().describe("Proposed new Docker Compose file content"),
+  }, async (args) => {
+    try {
+      const stackFile = await client.get(`/api/stacks/${args.id}/file`) as Record<string, unknown>;
+      const currentContent = stackFile.StackFileContent as string;
+      const result = diffComposeServices(currentContent, args.proposedContent);
+      return jsonResponse({
+        summary: {
+          addedServices: result.added,
+          removedServices: result.removed,
+          modifiedServices: result.modified,
+          unchangedServices: result.unchanged,
+        },
+        diff: result.diffText,
+      });
     } catch (e) {
       return errorResponse(e);
     }
