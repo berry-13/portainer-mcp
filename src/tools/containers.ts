@@ -93,7 +93,112 @@ export function registerContainerTools(server: McpServer, client: PortainerClien
     }
   });
 
+  server.tool("read_file_from_container", "Read a file from inside a container", {
+    endpointId: eid,
+    id: z.string().describe("Container ID or name"),
+    path: z.string().describe("Absolute path to the file inside the container"),
+  }, async (args) => {
+    try {
+      // Use exec to cat the file - works for text files
+      const execBody = {
+        Cmd: ["cat", args.path],
+        AttachStdout: true,
+        AttachStderr: true,
+      };
+      const execResult = await client.post(
+        client.dockerPath(args.endpointId, `/containers/${args.id}/exec`),
+        execBody
+      ) as { Id: string };
+
+      const output = await client.post(
+        client.dockerPath(args.endpointId, `/exec/${execResult.Id}/start`),
+        { Detach: false, Tty: false }
+      );
+      return textResponse(String(output));
+    } catch (e) {
+      return errorResponse(e);
+    }
+  });
+
+  server.tool("list_files_in_container", "List files in a directory inside a container", {
+    endpointId: eid,
+    id: z.string().describe("Container ID or name"),
+    path: z.string().describe("Absolute directory path inside the container"),
+  }, async (args) => {
+    try {
+      const execBody = {
+        Cmd: ["ls", "-la", args.path],
+        AttachStdout: true,
+        AttachStderr: true,
+      };
+      const execResult = await client.post(
+        client.dockerPath(args.endpointId, `/containers/${args.id}/exec`),
+        execBody
+      ) as { Id: string };
+
+      const output = await client.post(
+        client.dockerPath(args.endpointId, `/exec/${execResult.Id}/start`),
+        { Detach: false, Tty: false }
+      );
+      return textResponse(String(output));
+    } catch (e) {
+      return errorResponse(e);
+    }
+  });
+
+  server.tool("diff_container", "Show filesystem changes in a container since creation", {
+    endpointId: eid,
+    id: z.string().describe("Container ID or name"),
+  }, async (args) => {
+    try {
+      const result = await client.get(client.dockerPath(args.endpointId, `/containers/${args.id}/changes`));
+      const changes = result as Array<{ Path: string; Kind: number }> | null;
+      if (!changes || changes.length === 0) {
+        return textResponse("No filesystem changes detected.");
+      }
+      const kindMap: Record<number, string> = { 0: "Modified", 1: "Added", 2: "Deleted" };
+      const formatted = changes.map(c => `${kindMap[c.Kind] || "Unknown"}: ${c.Path}`).join("\n");
+      return textResponse(formatted);
+    } catch (e) {
+      return errorResponse(e);
+    }
+  });
+
   if (!readOnly) {
+    server.tool("write_file_to_container", "Write content to a file inside a container", {
+      endpointId: eid,
+      id: z.string().describe("Container ID or name"),
+      path: z.string().describe("Absolute path to the file inside the container"),
+      content: z.string().describe("File content to write"),
+    }, async (args) => {
+      try {
+        // Use exec with sh -c to write file content
+        const escaped = args.content.replace(/'/g, "'\\''");
+        const execBody = {
+          Cmd: ["sh", "-c", `cat > '${args.path}' << 'PORTAINER_MCP_EOF'\n${args.content}\nPORTAINER_MCP_EOF`],
+          AttachStdout: true,
+          AttachStderr: true,
+        };
+        const execResult = await client.post(
+          client.dockerPath(args.endpointId, `/containers/${args.id}/exec`),
+          execBody
+        ) as { Id: string };
+
+        const output = await client.post(
+          client.dockerPath(args.endpointId, `/exec/${execResult.Id}/start`),
+          { Detach: false, Tty: false }
+        );
+        const text = String(output).trim();
+        if (text) {
+          return textResponse(`File written. Output: ${text}`);
+        }
+        return jsonResponse({ success: true, path: args.path });
+      } catch (e) {
+        return errorResponse(e);
+      }
+    });
+
+
     server.tool("create_container", "Create a new container", {
       endpointId: eid,
       name: z.string().optional().describe("Container name"),
