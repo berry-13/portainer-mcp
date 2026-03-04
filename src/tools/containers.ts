@@ -5,6 +5,17 @@ import { jsonResponse, textResponse, errorResponse } from "../utils/response.js"
 import { paginatedResponse } from "../utils/response.js";
 import { summarizeContainer, summarizeContainerInspect } from "../utils/filters.js";
 
+function safeRegex(pattern: string): RegExp {
+  if (pattern.length > 200) {
+    throw new Error("Regex pattern too long (max 200 characters)");
+  }
+  try {
+    return new RegExp(pattern, "i");
+  } catch (e) {
+    throw new Error(`Invalid regex pattern: ${e instanceof Error ? e.message : String(e)}`);
+  }
+}
+
 export function registerContainerTools(server: McpServer, client: ClientAccessor, readOnly: boolean): void {
   const eid = z.number().describe("Environment/endpoint ID");
 
@@ -99,6 +110,9 @@ export function registerContainerTools(server: McpServer, client: ClientAccessor
     path: z.string().describe("Absolute path to the file inside the container"),
   }, async (args) => {
     try {
+      if (!args.path.startsWith("/")) {
+        return errorResponse(new Error("Path must be absolute (start with /)"));
+      }
       // Use exec to cat the file - works for text files
       const execBody = {
         Cmd: ["cat", args.path],
@@ -126,6 +140,9 @@ export function registerContainerTools(server: McpServer, client: ClientAccessor
     path: z.string().describe("Absolute directory path inside the container"),
   }, async (args) => {
     try {
+      if (!args.path.startsWith("/")) {
+        return errorResponse(new Error("Path must be absolute (start with /)"));
+      }
       const execBody = {
         Cmd: ["ls", "-la", args.path],
         AttachStdout: true,
@@ -172,10 +189,13 @@ export function registerContainerTools(server: McpServer, client: ClientAccessor
       content: z.string().describe("File content to write"),
     }, async (args) => {
       try {
-        // Use exec with sh -c to write file content
-        const escaped = args.content.replace(/'/g, "'\\''");
+        if (!args.path.startsWith("/")) {
+          return errorResponse(new Error("Path must be absolute (start with /)"));
+        }
+        // Use base64 encoding to safely transfer content, path passed as positional arg to avoid shell injection
+        const b64 = Buffer.from(args.content).toString("base64");
         const execBody = {
-          Cmd: ["sh", "-c", `cat > '${args.path}' << 'PORTAINER_MCP_EOF'\n${args.content}\nPORTAINER_MCP_EOF`],
+          Cmd: ["sh", "-c", "printf '%s' \"$1\" | base64 -d > \"$2\"", "_", b64, args.path],
           AttachStdout: true,
           AttachStderr: true,
         };
@@ -389,7 +409,7 @@ export function registerContainerTools(server: McpServer, client: ClientAccessor
         const containers = await client().get(client().dockerPath(args.endpointId, "/containers/json"), query) as Array<Record<string, unknown>>;
         let targets = containers;
         if (args.namePattern) {
-          const re = new RegExp(args.namePattern, "i");
+          const re = safeRegex(args.namePattern);
           targets = targets.filter(c => {
             const names = c.Names as string[] | undefined;
             return names?.some(n => re.test(n));
@@ -429,7 +449,7 @@ export function registerContainerTools(server: McpServer, client: ClientAccessor
         const containers = await client().get(client().dockerPath(args.endpointId, "/containers/json"), query) as Array<Record<string, unknown>>;
         let targets = containers;
         if (args.namePattern) {
-          const re = new RegExp(args.namePattern, "i");
+          const re = safeRegex(args.namePattern);
           targets = targets.filter(c => {
             const names = c.Names as string[] | undefined;
             return names?.some(n => re.test(n));
@@ -470,7 +490,7 @@ export function registerContainerTools(server: McpServer, client: ClientAccessor
         const containers = await client().get(client().dockerPath(args.endpointId, "/containers/json"), query) as Array<Record<string, unknown>>;
         let targets = containers;
         if (args.namePattern) {
-          const re = new RegExp(args.namePattern, "i");
+          const re = safeRegex(args.namePattern);
           targets = targets.filter(c => {
             const names = c.Names as string[] | undefined;
             return names?.some(n => re.test(n));

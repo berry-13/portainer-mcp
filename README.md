@@ -3,7 +3,7 @@
   <br/>
   <strong style="font-size: 2em;">portainer-mcp</strong>
   <br/>
-  <em>The complete MCP server for Portainer &mdash; 112 tools, zero version lock-in.</em>
+  <em>The complete MCP server for Portainer &mdash; 103 tools, zero version lock-in.</em>
 </p>
 
 <p align="center">
@@ -23,7 +23,7 @@ The official Portainer MCP server is locked to v2.31.2 and crashes on newer vers
 
 **This is a full rebuild from scratch:**
 
-- **112 tools** covering every Docker and Portainer API surface
+- **103 tools** covering every Docker and Portainer API surface
 - **Works with any Portainer version** &mdash; no hardcoded version checks
 - **Multi-instance** &mdash; manage multiple Portainer servers from one MCP
 - **Dual transport** &mdash; stdio for CLI, Streamable HTTP for remote/web
@@ -73,7 +73,7 @@ npx portainer-mcp
 
 ## Tools
 
-### Containers &mdash; 25 tools
+### Containers &mdash; 22 tools
 
 | Tool | Type | Description |
 |------|------|-------------|
@@ -100,7 +100,7 @@ npx portainer-mcp
 | `bulk_stop_containers` | write | Stop containers by name pattern or label |
 | `bulk_restart_containers` | write | Restart containers by name pattern or label |
 
-### Images &mdash; 12 tools
+### Images &mdash; 10 tools
 
 | Tool | Type | Description |
 |------|------|-------------|
@@ -132,7 +132,7 @@ npx portainer-mcp
 | `recreate_stack` | write | Pull + redeploy in one operation |
 | `rollback_stack` | write | Rollback to previous compose content |
 
-### Networks &mdash; 8 tools
+### Networks &mdash; 7 tools
 
 | Tool | Type | Description |
 |------|------|-------------|
@@ -144,7 +144,7 @@ npx portainer-mcp
 | `disconnect_network` | write | Detach a container from a network |
 | `prune_networks` | write | Clean up unused networks |
 
-### Volumes &mdash; 6 tools
+### Volumes &mdash; 5 tools
 
 | Tool | Type | Description |
 |------|------|-------------|
@@ -177,7 +177,7 @@ npx portainer-mcp
 | `update_environment` | write | Update environment settings |
 | `delete_environment` | write | Delete an environment |
 
-### Teams &mdash; 9 tools
+### Teams &mdash; 8 tools
 
 | Tool | Type | Description |
 |------|------|-------------|
@@ -351,8 +351,8 @@ npx portainer-mcp --server ... --token ... --read-only
 
 When enabled, all write/delete tools are **not registered** &mdash; they don't show up in `listTools` at all. This is a hard gate, not a soft warning. Safe for monitoring-only access.
 
-**Read-only tools available:** 47
-**Write tools hidden:** 65
+**Read-only tools available:** 49
+**Write tools hidden:** 54
 
 ---
 
@@ -398,15 +398,15 @@ src/
   tools/
     index.ts           Orchestrator: registers all 13 tool modules
     system.ts          Status, health, events, stats, deps, logs (8)
-    containers.ts      Full container lifecycle + file ops (25)
-    images.ts          Image management + security analysis (12)
+    containers.ts      Full container lifecycle + file ops (22)
+    images.ts          Image management + security analysis (10)
     stacks.ts          Stack lifecycle + diff + rollback (12)
-    networks.ts        Network management (8)
-    volumes.ts         Volume management (6)
+    networks.ts        Network management (7)
+    volumes.ts         Volume management (5)
     environments.ts    Environment CRUD (5)
     registries.ts      Registry CRUD (5)
     users.ts           User CRUD (5)
-    teams.ts           Team + membership management (9)
+    teams.ts           Team + membership management (8)
     templates.ts       Template management (6)
     tags.ts            Tag management (3)
     webhooks.ts        Webhook management (3)

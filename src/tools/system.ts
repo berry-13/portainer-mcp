@@ -282,7 +282,15 @@ export function registerSystemTools(server: McpServer, client: ClientAccessor, r
 
       let targets = containers;
       if (args.namePattern) {
-        const re = new RegExp(args.namePattern, "i");
+        if (args.namePattern.length > 200) {
+          return errorResponse(new Error("Regex pattern too long (max 200 characters)"));
+        }
+        let re: RegExp;
+        try {
+          re = new RegExp(args.namePattern, "i");
+        } catch (e) {
+          return errorResponse(new Error(`Invalid regex pattern: ${e instanceof Error ? e.message : String(e)}`));
+        }
         targets = targets.filter(c => {
           const names = c.Names as string[] | undefined;
           return names?.some(n => re.test(n));

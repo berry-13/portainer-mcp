@@ -45,15 +45,19 @@ export function parseConfig(): Config {
       case "--skip-tls-verify":
         skipTlsVerify = true;
         break;
-      case "--timeout":
-        timeout = parseInt(args[++i], 10);
+      case "--timeout": {
+        const parsed = parseInt(args[++i], 10);
+        if (!isNaN(parsed)) timeout = parsed;
         break;
+      }
       case "--transport":
         transport = args[++i] as TransportType;
         break;
-      case "--port":
-        port = parseInt(args[++i], 10);
+      case "--port": {
+        const parsed = parseInt(args[++i], 10);
+        if (!isNaN(parsed)) port = parsed;
         break;
+      }
       case "--instances":
         instancesJson = args[++i];
         break;
@@ -70,13 +74,15 @@ export function parseConfig(): Config {
     skipTlsVerify = true;
   }
   if (timeout === undefined && process.env.PORTAINER_TIMEOUT) {
-    timeout = parseInt(process.env.PORTAINER_TIMEOUT, 10);
+    const parsed = parseInt(process.env.PORTAINER_TIMEOUT, 10);
+    if (!isNaN(parsed)) timeout = parsed;
   }
   if (transport === "stdio" && process.env.PORTAINER_TRANSPORT) {
     transport = process.env.PORTAINER_TRANSPORT as TransportType;
   }
   if (port === undefined && process.env.PORTAINER_PORT) {
-    port = parseInt(process.env.PORTAINER_PORT, 10);
+    const parsed = parseInt(process.env.PORTAINER_PORT, 10);
+    if (!isNaN(parsed)) port = parsed;
   }
 
   if (!server) {

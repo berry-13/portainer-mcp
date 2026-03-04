@@ -67,14 +67,13 @@ if (config.transport === "http") {
         const newSessionId = transport.sessionId;
         if (newSessionId) {
           sessions.set(newSessionId, { server, transport });
-        }
 
-        res.on("close", () => {
-          if (newSessionId && !sessions.has(newSessionId)) {
-            transport.close();
+          // Clean up session when transport closes (e.g. client disconnect)
+          transport.onclose = () => {
+            sessions.delete(newSessionId);
             server.close();
-          }
-        });
+          };
+        }
       } else if (sessionId && sessions.has(sessionId)) {
         // Existing session
         const session = sessions.get(sessionId)!;
