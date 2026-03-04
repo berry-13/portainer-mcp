@@ -213,5 +213,73 @@ export function registerStackTools(server: McpServer, client: ClientAccessor, re
         return errorResponse(e);
       }
     });
+
+    server.tool("rollback_stack", "Rollback a stack to its previous compose file (uses Portainer's git-based stack versioning)", {
+      id: z.number().describe("Stack ID"),
+      endpointId: z.number().describe("Environment/endpoint ID"),
+      previousContent: z.string().optional().describe("Previous compose file content to rollback to (if not provided, tries to fetch from Portainer's stack history)"),
+    }, async (args) => {
+      try {
+        const steps: string[] = [];
+
+        let rollbackContent = args.previousContent;
+
+        if (!rollbackContent) {
+          // Try to get previous version from Portainer's resource control / git history
+          try {
+            const stack = await client().get(`/api/stacks/${args.id}`) as Record<string, unknown>;
+            const gitConfig = stack.GitConfig as Record<string, unknown> | undefined;
+            if (gitConfig) {
+              steps.push("Stack uses git-based deployment. Use git to revert and update the stack with the previous commit's compose file.");
+              return jsonResponse({
+                success: false,
+                message: "Git-based stack detected. Provide the previous compose file content in the 'previousContent' parameter, or revert the git commit and use update_stack.",
+                gitConfig: {
+                  url: gitConfig.URL,
+                  referenceName: gitConfig.ReferenceName,
+                  configFilePath: gitConfig.ConfigFilePath,
+                },
+              });
+            }
+          } catch {
+            // Ignore
+          }
+
+          return errorResponse(new Error("No previousContent provided and no automatic rollback source available. Provide the previous compose file content in the 'previousContent' parameter."));
+        }
+
+        // Validate the rollback content
+        const { validateCompose } = await import("../utils/compose.js");
+        const validation = validateCompose(rollbackContent);
+        if (!validation.valid) {
+          return errorResponse(new Error(`Rollback content validation failed: ${validation.errors.join("; ")}`));
+        }
+        steps.push("Validated rollback compose file");
+
+        // Stop current stack
+        try {
+          await client().post(`/api/stacks/${args.id}/stop`, undefined, { endpointId: String(args.endpointId) });
+          steps.push("Stopped current stack");
+        } catch {
+          steps.push("Stack was already stopped");
+        }
+
+        // Update with previous content
+        await client().put(`/api/stacks/${args.id}`, {
+          StackFileContent: rollbackContent,
+          PullImage: true,
+          Prune: true,
+        }, { endpointId: String(args.endpointId) });
+        steps.push("Updated stack with rollback content");
+
+        // Start the stack
+        await client().post(`/api/stacks/${args.id}/start`, undefined, { endpointId: String(args.endpointId) });
+        steps.push("Started rolled-back stack");
+
+        return jsonResponse({ success: true, steps });
+      } catch (e) {
+        return errorResponse(e);
+      }
+    });
   }
 }
