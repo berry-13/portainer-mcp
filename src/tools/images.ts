@@ -71,6 +71,83 @@ export function registerImageTools(server: McpServer, client: PortainerClient, r
     }
   });
 
+  server.tool("inspect_image_security", "Get security-relevant details of an image (user, ports, capabilities)", {
+    endpointId: eid,
+    id: z.string().describe("Image ID or name"),
+  }, async (args) => {
+    try {
+      const result = await client.get(client.dockerPath(args.endpointId, `/images/${args.id}/json`)) as Record<string, unknown>;
+      const config = result.Config as Record<string, unknown> | undefined;
+      const rootfs = result.RootFS as Record<string, unknown> | undefined;
+
+      const security: Record<string, unknown> = {
+        Id: typeof result.Id === "string" ? result.Id.slice(0, 19) : result.Id,
+        RepoTags: result.RepoTags,
+        Created: result.Created,
+        Architecture: result.Architecture,
+        Os: result.Os,
+        Size: result.Size,
+        User: config?.User || "(root - no user set)",
+        ExposedPorts: config?.ExposedPorts || {},
+        Env: config?.Env,
+        Volumes: config?.Volumes || {},
+        Entrypoint: config?.Entrypoint,
+        Cmd: config?.Cmd,
+        Labels: config?.Labels,
+        LayerCount: rootfs ? (rootfs.Layers as unknown[] | undefined)?.length : undefined,
+      };
+
+      // Flag potential security concerns
+      const concerns: string[] = [];
+      if (!config?.User || config.User === "") {
+        concerns.push("Container runs as root (no USER directive)");
+      }
+      const env = (config?.Env || []) as string[];
+      for (const e of env) {
+        const lower = e.toLowerCase();
+        if (lower.includes("password") || lower.includes("secret") || lower.includes("api_key") || lower.includes("token")) {
+          concerns.push(`Potentially sensitive env var: ${e.split("=")[0]}`);
+        }
+      }
+      const ports = Object.keys((config?.ExposedPorts || {}) as Record<string, unknown>);
+      const privilegedPorts = ports.filter(p => {
+        const num = parseInt(p);
+        return num > 0 && num < 1024;
+      });
+      if (privilegedPorts.length > 0) {
+        concerns.push(`Exposes privileged ports: ${privilegedPorts.join(", ")}`);
+      }
+
+      security.securityConcerns = concerns.length > 0 ? concerns : ["No obvious concerns detected"];
+
+      return jsonResponse(security);
+    } catch (e) {
+      return errorResponse(e);
+    }
+  });
+
+  server.tool("get_image_vulnerabilities", "Get vulnerability scan results for an image (requires Portainer with scanning enabled)", {
+    endpointId: eid,
+    id: z.string().describe("Image ID or name (must be the full image name with tag)"),
+  }, async (args) => {
+    try {
+      // Try Portainer's vulnerability endpoint
+      const result = await client.get(`/api/endpoints/${args.endpointId}/docker/images/${encodeURIComponent(args.id)}/vulnerabilities`);
+      return jsonResponse(result);
+    } catch (e) {
+      // If the endpoint doesn't exist, provide a helpful message
+      const msg = e instanceof Error ? e.message : String(e);
+      if (msg.includes("404") || msg.includes("Not Found")) {
+        return jsonResponse({
+          available: false,
+          message: "Vulnerability scanning is not available. This requires Portainer Business Edition with image scanning enabled, or an external scanner integration.",
+          suggestion: "Use inspect_image_security for basic security analysis of the image configuration.",
+        });
+      }
+      return errorResponse(e);
+    }
+  });
+
   if (!readOnly) {
     server.tool("pull_image", "Pull an image from a registry", {
       endpointId: eid,
