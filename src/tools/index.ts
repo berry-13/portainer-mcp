@@ -1,0 +1,31 @@
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { PortainerClient } from "../client.js";
+import { registerSystemTools } from "./system.js";
+import { registerEnvironmentTools } from "./environments.js";
+import { registerContainerTools } from "./containers.js";
+import { registerImageTools } from "./images.js";
+import { registerVolumeTools } from "./volumes.js";
+import { registerNetworkTools } from "./networks.js";
+import { registerStackTools } from "./stacks.js";
+import { registerRegistryTools } from "./registries.js";
+import { registerUserTools } from "./users.js";
+import { registerTeamTools } from "./teams.js";
+import { registerTemplateTools } from "./templates.js";
+import { registerTagTools } from "./tags.js";
+import { registerWebhookTools } from "./webhooks.js";
+
+export function registerAllTools(server: McpServer, client: PortainerClient, readOnly: boolean): void {
+  registerSystemTools(server, client, readOnly);
+  registerEnvironmentTools(server, client, readOnly);
+  registerContainerTools(server, client, readOnly);
+  registerImageTools(server, client, readOnly);
+  registerVolumeTools(server, client, readOnly);
+  registerNetworkTools(server, client, readOnly);
+  registerStackTools(server, client, readOnly);
+  registerRegistryTools(server, client, readOnly);
+  registerUserTools(server, client, readOnly);
+  registerTeamTools(server, client, readOnly);
+  registerTemplateTools(server, client, readOnly);
+  registerTagTools(server, client, readOnly);
+  registerWebhookTools(server, client, readOnly);
+}
