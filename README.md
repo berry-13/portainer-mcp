@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/portainer/portainer/develop/app/assets/images/portainer-logo.svg" alt="Portainer" width="80" />
+  <img src="https://raw.githubusercontent.com/portainer/portainer/develop/app/assets/images/logo_alt.svg" alt="Portainer" width="80" />
   <br/>
   <strong style="font-size: 2em;">portainer-mcp</strong>
   <br/>
